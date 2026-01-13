@@ -82,33 +82,45 @@ def download_pdf():
         return "Nenhum relatório disponível para download", 400
 
     try:
-        # Criação do PDF
-        pdf = FPDF()
+        # Criação do PDF com margens explícitas
+        pdf = FPDF(orientation='P', unit='mm', format='A4')
+        pdf.set_margins(15, 15, 15)
         pdf.add_page()
+        
+        # Título - Largura ajustada para 180mm (seguro para A4)
         pdf.set_font("Helvetica", 'B', 22)
         pdf.set_text_color(102, 126, 234)
-        pdf.cell(200, 20, txt="Relatório SEO Pro", ln=True, align='C')
+        pdf.cell(180, 20, txt="Relatório SEO Pro", ln=True, align='C')
         
         pdf.ln(10)
+        
+        # Informações Gerais
         pdf.set_font("Helvetica", 'B', 12)
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(200, 10, txt=f"Site Analisado: {current_report['url']}", ln=True)
-        pdf.cell(200, 10, txt=f"Pontuação Geral: {current_report['score']}/100", ln=True)
+        # Usamos multi_cell para a URL caso ela seja muito longa e precise quebrar linha
+        pdf.multi_cell(180, 10, txt=f"Site Analisado: {current_report['url']}")
+        pdf.cell(180, 10, txt=f"Pontuação Geral: {current_report['score']}/100", ln=True)
         
         pdf.ln(10)
+        
+        # Seção de Problemas
         pdf.set_font("Helvetica", 'B', 14)
-        pdf.cell(200, 10, txt="Pontos de Melhoria Identificados:", ln=True)
+        pdf.cell(180, 10, txt="Pontos de Melhoria Identificados:", ln=True)
         
         pdf.set_font("Helvetica", size=12)
-        # CORREÇÃO AQUI: Usando hífen '-' em vez de '•'
+        # Listagem de erros com largura de 180mm para evitar o erro de espaço horizontal
         for issue in current_report['issues']:
-            pdf.multi_cell(0, 10, txt=f"- {issue}")
+            pdf.multi_cell(180, 8, txt=f"- {issue}")
+            pdf.ln(2)
         
         pdf.ln(20)
+        
+        # Rodapé/Nota final
         pdf.set_font("Helvetica", 'I', 10)
         pdf.set_text_color(128, 128, 128)
-        pdf.multi_cell(0, 10, txt="Este relatório é uma amostra técnica. Para correções completas e serviços de otimização, entre em contato conosco.")
+        pdf.multi_cell(180, 10, txt="Nota: Este relatório é uma análise técnica automatizada para fins de otimização de mecanismos de busca (SEO).")
 
+        # Gerar o PDF
         pdf_bytes = pdf.output() 
         buffer = io.BytesIO(pdf_bytes)
         buffer.seek(0)
@@ -116,12 +128,11 @@ def download_pdf():
         return send_file(
             buffer,
             as_attachment=True,
-            download_name="Relatorio_Otimizacao.pdf",
+            download_name="Relatorio_Otimizacao_SEO.pdf",
             mimetype='application/pdf'
         )
     except Exception as e:
-        # Mostra o erro exato se algo der errado, facilitando a depuração
-        return f"Erro ao gerar PDF: {str(e)}", 500
+        return f"Erro técnico ao gerar PDF: {str(e)}", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
