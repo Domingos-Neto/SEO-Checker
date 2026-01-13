@@ -4,10 +4,11 @@ from bs4 import BeautifulSoup
 import time
 from fpdf import FPDF
 import io
+import os
 
 app = Flask(__name__)
 
-# Simulação de banco de dados simples para o relatório atual
+# Armazenamento temporário simples
 current_report = {}
 
 def analyze_seo(url):
@@ -15,9 +16,9 @@ def analyze_seo(url):
         if not url.startswith('http'):
             url = 'https://' + url
             
-        headers = {'User-Agent': 'Mozilla/5.0'}
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
         start_time = time.time()
-        response = requests.get(url, timeout=10, headers=headers)
+        response = requests.get(url, timeout=15, headers=headers)
         end_time = time.time()
         
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -42,7 +43,7 @@ def analyze_seo(url):
             issues.append(f"Existem {len(images_without_alt)} imagens sem descrição (alt tag).")
         if load_time > 2.0:
             score -= 20
-            issues.append(f"Site lento: {load_time}s. O ideal é menos de 2s.")
+            issues.append(f"Site lento: {load_time}s. O ideal é menos de 2s para SEO.")
 
         return {
             "url": url,
@@ -65,54 +66,57 @@ def index():
         url = request.form.get('url')
         if url:
             report = analyze_seo(url)
-            current_report = report # Salva para o PDF
+            current_report = report
     return render_template('index.html', report=report)
 
 @app.route('/checkout')
 def checkout():
-    # Aqui você redirecionaria para o link do Mercado Pago ou Stripe
-    # Por agora, vamos simular que o pagamento foi feito e liberar o PDF
     return render_template('checkout.html', report=current_report)
 
 @app.route('/download_pdf')
 def download_pdf():
-    if not current_report:
+    if not current_report or current_report.get('status') != "Sucesso":
         return redirect(url_for('index'))
 
-    # Criando o PDF
     pdf = FPDF()
     pdf.add_page()
     
-    # Cabeçalho
+    # Cabeçalho do PDF
     pdf.set_font("Arial", 'B', 20)
     pdf.set_text_color(30, 60, 114)
-    pdf.cell(200, 10, txt="Relatório de Auditoria SEO Pro", ln=True, align='C')
+    pdf.cell(200, 20, txt="Relatório de Auditoria SEO Pro", ln=True, align='C')
     
     pdf.ln(10)
     pdf.set_font("Arial", 'B', 12)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(200, 10, txt=f"Análise para: {current_report['url']}", ln=True)
-    pdf.cell(200, 10, txt=f"Pontuação Geral: {current_report['score']}/100", ln=True)
+    pdf.cell(200, 10, txt=f"Análise realizada para: {current_report['url']}", ln=True)
+    pdf.cell(200, 10, txt=f"Pontuação Geral de Otimização: {current_report['score']}/100", ln=True)
     
-    pdf.ln(5)
+    pdf.ln(10)
     pdf.set_font("Arial", 'B', 14)
-    pdf.cell(200, 10, txt="Problemas Detectados:", ln=True)
+    pdf.cell(200, 10, txt="Pontos de Melhoria:", ln=True)
     
     pdf.set_font("Arial", size=12)
     for issue in current_report['issues']:
-        pdf.multi_cell(0, 10, txt=f"- {issue}")
+        pdf.multi_cell(0, 10, txt=f"[-] {issue}")
     
-    pdf.ln(10)
+    pdf.ln(20)
     pdf.set_font("Arial", 'I', 10)
-    pdf.multi_cell(0, 10, txt="Este relatório técnico indica melhorias vitais para o ranqueamento no Google. Para consultoria completa, entre em contato com o desenvolvedor.")
+    pdf.set_text_color(100, 100, 100)
+    pdf.multi_cell(0, 10, txt="Nota: Este relatório é uma análise técnica básica. Para uma consultoria de SEO completa e implementação das correções, entre em contato.")
 
-    # Gerar o arquivo em memória para download
     output = io.BytesIO()
     pdf_content = pdf.output(dest='S')
+    if isinstance(pdf_content, str): # Ajuste para diferentes versões da fpdf2
+        pdf_content = pdf_content.encode('latin1')
     output.write(pdf_content)
     output.seek(0)
 
-    return send_file(output, as_attachment=True, download_name=f"Relatorio_SEO_{int(time.time())}.pdf", mimetype='application/pdf')
+    return send_file(output, as_attachment=True, download_name="Relatorio_SEO.pdf", mimetype='application/pdf')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # CONFIGURAÇÃO CRUCIAL PARA O RENDER:
+    # O Render define uma porta automaticamente via variável de ambiente
+    port = int(os.environ.get("PORT", 5000))
+    # O host deve ser 0.0.0.0 para ser acessível externamente
+    app.run(host='0.0.0.0', port=port)
