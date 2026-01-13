@@ -8,7 +8,7 @@ import os
 
 app = Flask(__name__)
 
-# Armazenamento temporário simples
+# Armazenamento temporário para o relatório (em produção, usaria um banco de dados)
 current_report = {}
 
 def analyze_seo(url):
@@ -42,7 +42,7 @@ def analyze_seo(url):
             score -= 15
             issues.append(f"Existem {len(images_without_alt)} imagens sem descrição (alt tag).")
         if load_time > 2.0:
-            score -= 20
+            score -= 25
             issues.append(f"Site lento: {load_time}s. O ideal é menos de 2s para SEO.")
 
         return {
@@ -71,52 +71,57 @@ def index():
 
 @app.route('/checkout')
 def checkout():
+    if not current_report:
+        return redirect(url_for('index'))
     return render_template('checkout.html', report=current_report)
 
 @app.route('/download_pdf')
 def download_pdf():
+    global current_report
     if not current_report or current_report.get('status') != "Sucesso":
-        return redirect(url_for('index'))
+        return "Nenhum relatório disponível para download", 400
 
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # Cabeçalho do PDF
-    pdf.set_font("Arial", 'B', 20)
-    pdf.set_text_color(30, 60, 114)
-    pdf.cell(200, 20, txt="Relatório de Auditoria SEO Pro", ln=True, align='C')
-    
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(200, 10, txt=f"Análise realizada para: {current_report['url']}", ln=True)
-    pdf.cell(200, 10, txt=f"Pontuação Geral de Otimização: {current_report['score']}/100", ln=True)
-    
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 14)
-    pdf.cell(200, 10, txt="Pontos de Melhoria:", ln=True)
-    
-    pdf.set_font("Arial", size=12)
-    for issue in current_report['issues']:
-        pdf.multi_cell(0, 10, txt=f"[-] {issue}")
-    
-    pdf.ln(20)
-    pdf.set_font("Arial", 'I', 10)
-    pdf.set_text_color(100, 100, 100)
-    pdf.multi_cell(0, 10, txt="Nota: Este relatório é uma análise técnica básica. Para uma consultoria de SEO completa e implementação das correções, entre em contato.")
+    try:
+        # Criação do PDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Helvetica", 'B', 22)
+        pdf.set_text_color(102, 126, 234) # Cor roxa do cabeçalho
+        pdf.cell(200, 20, txt="Relatório SEO Pro", ln=True, align='C')
+        
+        pdf.ln(10)
+        pdf.set_font("Helvetica", 'B', 12)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(200, 10, txt=f"Site Analisado: {current_report['url']}", ln=True)
+        pdf.cell(200, 10, txt=f"Pontuação Geral: {current_report['score']}/100", ln=True)
+        
+        pdf.ln(10)
+        pdf.set_font("Helvetica", 'B', 14)
+        pdf.cell(200, 10, txt="Pontos de Melhoria Identificados:", ln=True)
+        
+        pdf.set_font("Helvetica", size=12)
+        for issue in current_report['issues']:
+            pdf.multi_cell(0, 10, txt=f"• {issue}")
+        
+        pdf.ln(20)
+        pdf.set_font("Helvetica", 'I', 10)
+        pdf.set_text_color(128, 128, 128)
+        pdf.multi_cell(0, 10, txt="Este relatório é uma amostra técnica. Para correções completas e serviços de otimização, entre em contato conosco.")
 
-    output = io.BytesIO()
-    pdf_content = pdf.output(dest='S')
-    if isinstance(pdf_content, str): # Ajuste para diferentes versões da fpdf2
-        pdf_content = pdf_content.encode('latin1')
-    output.write(pdf_content)
-    output.seek(0)
+        # SOLUÇÃO PARA O ERRO 500: Gerar bytes diretamente
+        pdf_bytes = pdf.output() 
+        buffer = io.BytesIO(pdf_bytes)
+        buffer.seek(0)
 
-    return send_file(output, as_attachment=True, download_name="Relatorio_SEO.pdf", mimetype='application/pdf')
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="Relatorio_Otimizacao.pdf",
+            mimetype='application/pdf'
+        )
+    except Exception as e:
+        return f"Erro ao gerar PDF: {str(e)}", 500
 
 if __name__ == '__main__':
-    # CONFIGURAÇÃO CRUCIAL PARA O RENDER:
-    # O Render define uma porta automaticamente via variável de ambiente
     port = int(os.environ.get("PORT", 5000))
-    # O host deve ser 0.0.0.0 para ser acessível externamente
     app.run(host='0.0.0.0', port=port)
