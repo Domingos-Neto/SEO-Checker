@@ -2,49 +2,79 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>SEO Checker Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Checker Pro - Turbine seu Site</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .hero { background: #6f42c1; color: white; padding: 50px 0; text-align: center; }
-        .score-badge { font-size: 3rem; font-weight: bold; color: #dc3545; }
+        .hero-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 60px 0; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 0 auto; border: 5px solid #eee; }
+        .good { color: #28a745; border-color: #28a745; }
+        .bad { color: #dc3545; border-color: #dc3545; }
+        .card-report { border-radius: 15px; margin-top: -30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="bg-light">
-    <div class="hero">
+
+<div class="hero-section text-center">
+    <div class="container">
         <h1>SEO Checker Pro 🚀</h1>
-        <form method="POST" class="container mt-4">
-            <div class="input-group mb-3 w-50 mx-auto">
-                <input type="text" name="url" class="form-control" placeholder="www.site.com.br">
-                <button class="btn btn-warning" type="submit">Analisar</button>
+        <p class="lead">Descubra por que seu site não está vendendo e como consertar isso em segundos.</p>
+        <form method="POST" class="mt-4 row justify-content-center">
+            <div class="col-md-6 mb-2">
+                <input type="text" name="url" class="form-control form-control-lg" placeholder="Digite seu site (ex: www.meusite.com.br)" required>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold">Analisar Agora</button>
             </div>
         </form>
     </div>
+</div>
 
-    <div class="container mt-5">
-        {% if report %}
-            <div class="card p-4 shadow">
-                <div class="row">
-                    <div class="col-md-4 text-center">
-                        <div class="score-badge">{{ report.score }}</div>
-                        <p>Pontuação de Saúde</p>
-                    </div>
-                    <div class="col-md-8">
-                        <h3>Resultados para {{ report.url }}</h3>
-                        <p><strong>Erros:</strong></p>
-                        <ul>
-                            {% for issue in report.issues %}
-                                <li class="text-danger">{{ issue }}</li>
-                            {% endfor %}
-                        </ul>
-                        <hr>
-                        <div class="text-center">
-                            <h4>Deseja o PDF detalhado com as soluções?</h4>
-                            <a href="/checkout" class="btn btn-success btn-lg">Comprar Relatório por R$ 29,90</a>
+<div class="container my-5">
+    {% if report %}
+        <div class="card card-report p-4 bg-white">
+            {% if report.status == "Sucesso" %}
+                <div class="row text-center align-items-center">
+                    <div class="col-md-4">
+                        <div class="score-circle {{ 'good' if report.score > 70 else 'bad' }}">
+                            {{ report.score }}
                         </div>
+                        <p class="mt-2 text-muted fw-bold">Pontuação Geral</p>
+                    </div>
+                    <div class="col-md-8 text-start border-start ps-4">
+                        <h4 class="mb-3">Relatório para: <small class="text-primary" style="font-size: 14px;">{{ report.url }}</small></h4>
+                        <table class="table table-sm">
+                            <tr><td><strong>Título:</strong></td><td>{{ report.title }}</td></tr>
+                            <tr><td><strong>Tempo de Resposta:</strong></td><td>{{ report.load_time }}s</td></tr>
+                            <tr><td><strong>Imagens Encontradas:</strong></td><td>{{ report.images_count }}</td></tr>
+                        </table>
                     </div>
                 </div>
-            </div>
-        {% endif %}
-    </div>
+
+                <div class="mt-4">
+                    <h5 class="text-danger"><span class="me-2">🚨</span>O que precisa ser corrigido:</h5>
+                    <div class="alert alert-danger" style="background-color: #fff5f5;">
+                        <ul class="mb-0">
+                            {% for issue in report.issues %}
+                                <li>{{ issue }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="text-center mt-4">
+                        <p class="mb-3">Quer o guia passo-a-passo de como resolver esses problemas?</p>
+                        <a href="/checkout" class="btn btn-success btn-lg px-5 fw-bold">Comprar Relatório Completo por R$ 29,90</a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">Aviso: {{ report.message }}</div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<footer class="text-center py-4 text-muted">
+    <small>&copy; 2026 SEO Checker Pro - Uma ferramenta para lucrar.</small>
+</footer>
+
 </body>
 </html>
