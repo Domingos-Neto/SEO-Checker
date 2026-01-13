@@ -7,56 +7,42 @@ import io
 import os
 
 app = Flask(__name__)
-
-# Armazenamento temporário para o relatório
 current_report = {}
+
+# --- CONFIGURAÇÃO DE PAGAMENTO (OPCIONAL PARA TESTE) ---
+# Para usar real, instale: pip install mercadopago
+# import mercadopago
+# sdk = mercadopago.SDK("SEU_ACCESS_TOKEN_AQUI")
 
 def analyze_seo(url):
     try:
         if not url.startswith('http'):
             url = 'https://' + url
-            
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        headers = {'User-Agent': 'Mozilla/5.0'}
         start_time = time.time()
-        response = requests.get(url, timeout=15, headers=headers)
-        end_time = time.time()
-        
+        response = requests.get(url, timeout=10, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
+        load_time = round(time.time() - start_time, 2)
         
-        load_time = round(end_time - start_time, 2)
-        title = soup.title.string.strip() if soup.title else "Não encontrado"
-        h1 = [h.text.strip() for h in soup.find_all('h1')]
-        images = soup.find_all('img')
-        images_without_alt = [img for img in images if not img.get('alt')]
-        
-        score = 100
         issues = []
-        
-        if len(title) < 10:
-            score -= 20
-            issues.append("O título da página é muito curto ou inexistente.")
-        if not h1:
-            score -= 20
+        score = 100
+        if not soup.find('h1'):
             issues.append("Falta uma tag H1 (Título principal).")
-        if images_without_alt:
+            score -= 20
+        img_no_alt = len([img for img in soup.find_all('img') if not img.get('alt')])
+        if img_no_alt > 0:
+            issues.append(f"Existem {img_no_alt} imagens sem descrição (alt tag).")
             score -= 15
-            issues.append(f"Existem {len(images_without_alt)} imagens sem descrição (alt tag).")
-        if load_time > 2.0:
+        if load_time > 2:
+            issues.append(f"Site lento: {load_time}s. O ideal é menos de 2s.")
             score -= 25
-            issues.append(f"Site lento: {load_time}s. O ideal é menos de 2s para SEO.")
 
         return {
-            "url": url,
-            "status": "Sucesso",
-            "score": max(score, 0),
-            "load_time": load_time,
-            "title": title,
-            "h1_count": len(h1),
-            "images_count": len(images),
-            "issues": issues
+            "url": url, "score": max(score, 0), "load_time": load_time,
+            "issues": issues, "status": "Sucesso"
         }
-    except Exception as e:
-        return {"status": "Erro", "message": str(e)}
+    except:
+        return {"status": "Erro"}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -69,70 +55,61 @@ def index():
             current_report = report
     return render_template('index.html', report=report)
 
+@app.route('/comprar')
+def comprar():
+    # Aqui você integraria o Mercado Pago. 
+    # Por enquanto, vamos simular o redirecionamento para o checkout.
+    return redirect(url_for('checkout'))
+
 @app.route('/checkout')
 def checkout():
-    if not current_report:
-        return redirect(url_for('index'))
     return render_template('checkout.html', report=current_report)
 
 @app.route('/download_pdf')
 def download_pdf():
-    global current_report
-    if not current_report or current_report.get('status') != "Sucesso":
-        return "Nenhum relatório disponível para download", 400
+    if not current_report: return redirect(url_for('index'))
+    
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # --- NOVO LAYOUT PROFISSIONAL ---
+    # Cabeçalho Colorido
+    pdf.set_fill_color(102, 126, 234) # Roxo do seu site
+    pdf.rect(0, 0, 210, 40, 'F')
+    
+    pdf.set_font("Helvetica", 'B', 24)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(190, 30, "RELATÓRIO DE AUDITORIA SEO", ln=True, align='C')
+    
+    pdf.ln(20)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(190, 10, f"Análise do Site: {current_report['url']}", ln=True)
+    
+    # Caixa de Pontuação
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(190, 15, f"PONTUAÇÃO GERAL: {current_report['score']}/100", ln=True, align='C', fill=True)
+    
+    pdf.ln(10)
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(190, 10, "PROBLEMAS CRÍTICOS ENCONTRADOS:", ln=True)
+    
+    pdf.set_font("Helvetica", size=11)
+    for issue in current_report['issues']:
+        pdf.set_text_color(200, 0, 0) # Vermelho para erros
+        pdf.multi_cell(180, 8, txt=f"X {issue}")
+        pdf.ln(2)
+        
+    pdf.ln(20)
+    pdf.set_text_color(100, 100, 100)
+    pdf.set_font("Helvetica", 'I', 10)
+    pdf.multi_cell(180, 7, "Este documento prova que seu site precisa de ajustes técnicos para aparecer no Google. Entre em contato para uma consultoria completa.")
 
-    try:
-        # Criação do PDF com margens explícitas
-        pdf = FPDF(orientation='P', unit='mm', format='A4')
-        pdf.set_margins(15, 15, 15)
-        pdf.add_page()
-        
-        # Título - Largura ajustada para 180mm (seguro para A4)
-        pdf.set_font("Helvetica", 'B', 22)
-        pdf.set_text_color(102, 126, 234)
-        pdf.cell(180, 20, txt="Relatório SEO Pro", ln=True, align='C')
-        
-        pdf.ln(10)
-        
-        # Informações Gerais
-        pdf.set_font("Helvetica", 'B', 12)
-        pdf.set_text_color(0, 0, 0)
-        # Usamos multi_cell para a URL caso ela seja muito longa e precise quebrar linha
-        pdf.multi_cell(180, 10, txt=f"Site Analisado: {current_report['url']}")
-        pdf.cell(180, 10, txt=f"Pontuação Geral: {current_report['score']}/100", ln=True)
-        
-        pdf.ln(10)
-        
-        # Seção de Problemas
-        pdf.set_font("Helvetica", 'B', 14)
-        pdf.cell(180, 10, txt="Pontos de Melhoria Identificados:", ln=True)
-        
-        pdf.set_font("Helvetica", size=12)
-        # Listagem de erros com largura de 180mm para evitar o erro de espaço horizontal
-        for issue in current_report['issues']:
-            pdf.multi_cell(180, 8, txt=f"- {issue}")
-            pdf.ln(2)
-        
-        pdf.ln(20)
-        
-        # Rodapé/Nota final
-        pdf.set_font("Helvetica", 'I', 10)
-        pdf.set_text_color(128, 128, 128)
-        pdf.multi_cell(180, 10, txt="Nota: Este relatório é uma análise técnica automatizada para fins de otimização de mecanismos de busca (SEO).")
-
-        # Gerar o PDF
-        pdf_bytes = pdf.output() 
-        buffer = io.BytesIO(pdf_bytes)
-        buffer.seek(0)
-
-        return send_file(
-            buffer,
-            as_attachment=True,
-            download_name="Relatorio_Otimizacao_SEO.pdf",
-            mimetype='application/pdf'
-        )
-    except Exception as e:
-        return f"Erro técnico ao gerar PDF: {str(e)}", 500
+    output = io.BytesIO()
+    pdf_content = pdf.output()
+    output.write(pdf_content)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name="Auditoria_SEO_Premium.pdf", mimetype='application/pdf')
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
