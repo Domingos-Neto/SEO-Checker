@@ -146,6 +146,12 @@ def comprar():
     except Exception as e:
         return f"Erro de conexão: {str(e)}"
 
+@app.route('/gerar_gratis')
+def gerar_gratis():
+    if 'report' not in session:
+        return "Analise um site primeiro na home!", 400
+    return redirect(url_for('download_pdf'))
+
 @app.route('/pagamento_aprovado')
 def pagamento_aprovado():
     if 'report' not in session:
@@ -264,3 +270,4 @@ def download_pdf():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
