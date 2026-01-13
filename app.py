@@ -15,7 +15,7 @@ app.secret_key = 'sua_chave_secreta_super_segura'
 
 # 2. COLOCAR SEU TOKEN DO MERCADO PAGO AQUI
 # Pegue em: https://www.mercadopago.com.br/developers/panel
-sdk = mercadopago.SDK("SEU_ACCESS_TOKEN_AQUI_COLE_DENTRO_DAS_ASPAS")
+sdk = mercadopago.SDK("APP_USR-430272113998230-011315-b4e2d93f3de6b823f9a8814e2d8576ed-57091170")
 
 def analyze_seo(url):
     try:
@@ -156,3 +156,4 @@ def download_pdf():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
