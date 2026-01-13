@@ -8,7 +8,7 @@ import os
 
 app = Flask(__name__)
 
-# Armazenamento temporário para o relatório (em produção, usaria um banco de dados)
+# Armazenamento temporário para o relatório
 current_report = {}
 
 def analyze_seo(url):
@@ -86,7 +86,7 @@ def download_pdf():
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Helvetica", 'B', 22)
-        pdf.set_text_color(102, 126, 234) # Cor roxa do cabeçalho
+        pdf.set_text_color(102, 126, 234)
         pdf.cell(200, 20, txt="Relatório SEO Pro", ln=True, align='C')
         
         pdf.ln(10)
@@ -100,15 +100,15 @@ def download_pdf():
         pdf.cell(200, 10, txt="Pontos de Melhoria Identificados:", ln=True)
         
         pdf.set_font("Helvetica", size=12)
+        # CORREÇÃO AQUI: Usando hífen '-' em vez de '•'
         for issue in current_report['issues']:
-            pdf.multi_cell(0, 10, txt=f"• {issue}")
+            pdf.multi_cell(0, 10, txt=f"- {issue}")
         
         pdf.ln(20)
         pdf.set_font("Helvetica", 'I', 10)
         pdf.set_text_color(128, 128, 128)
         pdf.multi_cell(0, 10, txt="Este relatório é uma amostra técnica. Para correções completas e serviços de otimização, entre em contato conosco.")
 
-        # SOLUÇÃO PARA O ERRO 500: Gerar bytes diretamente
         pdf_bytes = pdf.output() 
         buffer = io.BytesIO(pdf_bytes)
         buffer.seek(0)
@@ -120,6 +120,7 @@ def download_pdf():
             mimetype='application/pdf'
         )
     except Exception as e:
+        # Mostra o erro exato se algo der errado, facilitando a depuração
         return f"Erro ao gerar PDF: {str(e)}", 500
 
 if __name__ == '__main__':
